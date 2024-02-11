@@ -13,9 +13,6 @@ import ConflictManagementProvider from "../providers/generic/installing/Conflict
 import PathResolver from "../r2mm/manager/PathResolver";
 import ZipProvider from "../providers/generic/zip/ZipProvider";
 
-const basePackageFiles = ["manifest.json", "readme.md", "icon.png"];
-
-
 type InstallRuleArgs = {
     profile: Profile,
     coreRule: CoreRuleType,
@@ -219,7 +216,7 @@ async function installState(args: InstallRuleArgs) {
 }
 
 export class InstallRuleInstaller extends PackageInstaller {
-    private readonly rule: CoreRuleType;
+    public readonly rule: CoreRuleType;
 
     constructor(rules: CoreRuleType) {
         super();

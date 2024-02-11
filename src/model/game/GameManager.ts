@@ -306,8 +306,10 @@ export default class GameManager {
         new Game("Cult of the Lamb", "COTL", "COTL",
             "Cult of the Lamb", ["Cult Of The Lamb.exe"], "Cult Of The Lamb_Data",
             "https://thunderstore.io/c/cult-of-the-lamb/api/v1/package/", "https://raw.githubusercontent.com/ebkr/r2modmanPlus/master/modExclusions.md",
-            [new StorePlatformMetadata(StorePlatform.STEAM, "1313140")], "Cotl.jpg",
-            GameSelectionDisplayMode.VISIBLE, GameInstanceType.GAME, PackageLoader.BEPINEX, ["cotl"]),
+            [
+                new StorePlatformMetadata(StorePlatform.STEAM, "1313140"),
+                new StorePlatformMetadata(StorePlatform.OTHER)
+            ], "Cotl.jpg", GameSelectionDisplayMode.VISIBLE, GameInstanceType.GAME, PackageLoader.BEPINEX, ["cotl"]),
 
         new Game("Chrono Ark", "ChronoArk", "ChronoArk",
             path.join("Chrono Ark", "x64", "Master"), ["ChronoArk.exe"], "ChronoArk_Data",
@@ -562,6 +564,19 @@ export default class GameManager {
             "https://thunderstore.io/c/sailwind/api/v1/package/", "https://raw.githubusercontent.com/ebkr/r2modmanPlus/master/modExclusions.md",
             [new StorePlatformMetadata(StorePlatform.STEAM, "1764530")], "Sailwind.png",
             GameSelectionDisplayMode.VISIBLE, GameInstanceType.GAME, PackageLoader.BEPINEX, []),
+        new Game(
+            "Voices of the Void", "VotV", "VotV",
+            "", ["VotV-Win64-Shipping.exe"], "VotV",
+            "https://thunderstore.io/c/voices-of-the-void/api/v1/package/", "https://raw.githubusercontent.com/ebkr/r2modmanPlus/master/modExclusions.md",
+            [new StorePlatformMetadata(StorePlatform.OTHER)], "VotV.png",
+            GameSelectionDisplayMode.VISIBLE, GameInstanceType.GAME, PackageLoader.SHIMLOADER, ["votv"]),
+
+        new Game(
+            "Palworld", "Palworld", "Palworld",
+            "Palworld", ["Palworld.exe"], "Pal",
+            "https://thunderstore.io/c/palworld/api/v1/package/", "https://raw.githubusercontent.com/ebkr/r2modmanPlus/master/modExclusions.md",
+            [new StorePlatformMetadata(StorePlatform.STEAM, "1623730")], "Palworld.png",
+            GameSelectionDisplayMode.VISIBLE, GameInstanceType.GAME, PackageLoader.SHIMLOADER, ["palworld"])
     ];
 
     static get activeGame(): Game {

@@ -10,23 +10,22 @@ import ModFileTracker from '../../../model/installing/ModFileTracker';
 import yaml from 'yaml';
 import ConflictManagementProvider from '../../../providers/generic/installing/ConflictManagementProvider';
 import ModMode from '../../../model/enums/ModMode';
-import InstallationRules, { CoreRuleType, ManagedRule, RuleSubtype } from '../../installing/InstallationRules';
+import InstallationRules, { CoreRuleType } from '../../installing/InstallationRules';
 import PathResolver from '../../../r2mm/manager/PathResolver';
 import GameManager from '../../../model/game/GameManager';
 import { MOD_LOADER_VARIANTS } from '../../installing/profile_installers/ModLoaderVariantRecord';
 import FileWriteError from '../../../model/errors/FileWriteError';
 import FileUtils from '../../../utils/FileUtils';
-import { GetInstallerIdForLoader } from '../../../model/installing/PackageLoader';
-import ZipProvider from "../../../providers/generic/zip/ZipProvider";
+import { GetInstallerIdForLoader, GetInstallerIdForPlugin } from '../../../model/installing/PackageLoader';
 import { PackageInstallers } from "../../../installers/registry";
 import { InstallArgs } from "../../../installers/PackageInstaller";
 import { InstallRuleInstaller } from "../../../installers/InstallRuleInstaller";
-
+import { ShimloaderPluginInstaller } from "../../../installers/ShimloaderInstaller";
 
 
 export default class GenericProfileInstaller extends ProfileInstallerProvider {
 
-    private readonly rule: CoreRuleType;
+    private readonly rule: CoreRuleType | undefined;
     private readonly legacyInstaller: InstallRuleInstaller;
 
     constructor() {
@@ -36,8 +35,27 @@ export default class GenericProfileInstaller extends ProfileInstallerProvider {
     }
 
     private async applyModModeForSubdir(mod: ManifestV2, tree: FileTree, profile: Profile, location: string, mode: number): Promise<R2Error | void> {
-        const subDirPaths = InstallationRules.getAllManagedPaths(this.rule.rules)
+        // TODO: Call through the installer interface. For now we hardcode the only known case because expanding the
+        //       installer system is out of scope.
+        //
+        //       In other words, this entire functionality of enabling & disabling mods should exist as a callable on
+        //       installers rather than here. Below is a dirty hack to fetch the install rules for the current only
+        //       known case.
+        let rule = this.rule;
+        const installerId = GetInstallerIdForPlugin(GameManager.activeGame.packageLoader);
+        if (installerId) {
+            const installer = PackageInstallers[installerId];
+            if (installer instanceof ShimloaderPluginInstaller) {
+                rule = installer.installer.rule;
+            }
+        }
+        if (!rule) {
+            return;
+        }
+
+        const subDirPaths = InstallationRules.getAllManagedPaths(rule.rules)
             .filter(value => value.trackingMethod === "SUBDIR");
+
         for (const dir of subDirPaths) {
             if (await FsProvider.instance.exists(path.join(profile.getPathOfProfile(), dir.route))) {
                 const dirContents = await FsProvider.instance.readdir(path.join(profile.getPathOfProfile(), dir.route));
@@ -156,9 +174,17 @@ export default class GenericProfileInstaller extends ProfileInstallerProvider {
 
         if (variant !== undefined) {
             return this.installModLoader(variant, args);
-        } else {
-            return this.installForManifestV2(args);
         }
+
+        const pluginInstaller = GetInstallerIdForPlugin(activeGame.packageLoader);
+
+        if (pluginInstaller !== null) {
+            await PackageInstallers[pluginInstaller].install(args);
+            return Promise.resolve(null);
+        }
+
+        // Revert to legacy install behavior.
+        return this.installForManifestV2(args);
     }
 
     async installModLoader(mapping: ModLoaderPackageMapping, args: InstallArgs): Promise<R2Error | null> {
@@ -215,8 +241,17 @@ export default class GenericProfileInstaller extends ProfileInstallerProvider {
                 );
             }
         }
-        const bepInExLocation: string = path.join(profile.getPathOfProfile(), 'BepInEx');
-        if (await fs.exists(bepInExLocation)) {
+
+        // BepInEx & shimloader plugin uninstall logic
+        // TODO: Move to work through the installer interface
+        const profilePath = profile.getPathOfProfile();
+        const searchLocations = ["BepInEx", "shimloader"];
+        for (const searchLocation of searchLocations) {
+            const bepInExLocation: string = path.join(profilePath, searchLocation);
+            if (!(await fs.exists(bepInExLocation))) {
+                continue
+            }
+
             try {
                 for (const file of (await fs.readdir(bepInExLocation))) {
                     if ((await fs.lstat(path.join(bepInExLocation, file))).isDirectory()) {
